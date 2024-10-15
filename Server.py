@@ -152,6 +152,12 @@ def command_input():
             except Exception as e:
                 print(f"error: {e}")
 
+        elif cmd.strip().lower() == 'list':
+            print('----Connected Players----')
+            for player in connected_players:
+                print(player)
+
+
         else:
             print(f"Неизвестная команда: {cmd}")
 
