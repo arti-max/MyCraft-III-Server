@@ -16,13 +16,23 @@ bi = 0
 bid = f"block_{bi}"
 
 cfg = Properties()
+
+if not os.path.exists('./server.properties'):
+    cfg["server-ip"] = ""
+    cfg["server-port"] = 25565
+    cfg["world-size"] = 64
+    cfg["world-height"] = 8
+    cfg["max-players"] = 10
+    with open('server.properties', 'wb') as prop:
+        cfg.store(prop, encoding="utf-8")
+
 with open('server.properties', 'rb') as prop:
     cfg.load(prop)
-
 serverIP = cfg.get("server-ip").data
 serverPORT = cfg.get("server-port").data
 worldSize = int(cfg.get("world-size").data)
 worldHeight = int(cfg.get("world-height").data)
+MAX_PLAYERS = int(cfg.get("max-players").data)
 
 if os.path.exists('./banned.txt'):
     with open('banned.txt', 'r') as bpf:
@@ -65,10 +75,22 @@ for item in level_list:
     if position == (63, 8, 63):
         print('World succefully sended to clients')
 
+
+@Server.event
+def getTabPlayers(Client, content):
+    players = []
+    for player in connected_players:
+        players.append(player)
+
+    # for i in range(20):
+    #     players.append(f"arti{i}")
+
+    Client.send_message("returnTabPlayers", {"players": players, "MAX": MAX_PLAYERS})
+
 @Server.event
 def onClientConnected(Client):
     print(f"{Client} has been connected!")
-    Easy.create_replicated_variable(f"player_{Client.id}", { "type" : "player", "id" : Client.id, "position" : (worldSize/2, 10, worldSize/2) })
+    Easy.create_replicated_variable(f"player_{Client.id}", { "type" : "player", "id" : Client.id, "position" : (worldSize/2, 10, worldSize/2)})
     Client.send_message("GetId", Client.id)
     Client.send_message("setSpawnPos", (worldSize/2, 10, worldSize/2))
     Client.send_message("getWorldList", world.getWorldList())
@@ -86,8 +108,11 @@ def onClientDisconnected(Client):
 def getPlayerName(Client, playerName):
     if playerName not in banned_players:
         if playerName not in connected_players:
-            connected_players[playerName] = Client
-            print(f"pname: {playerName}, connected_players: {connected_players}")
+            if len(connected_players) < MAX_PLAYERS:
+                connected_players[playerName] = Client
+                print(f"pname: {playerName}, connected_players: {connected_players}")
+            else:
+                Client.send_message("disconnect", "max")
         else:
             Client.send_message("disconnect", "name")
     else:
@@ -156,6 +181,7 @@ def command_input():
             print('----Connected Players----')
             for player in connected_players:
                 print(player)
+            print('-------------------------')
 
 
         else:
